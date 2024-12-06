@@ -1,0 +1,84 @@
+{% schema %}
+{
+  "name": "Trade-in Calculator",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}
+
+
+{{ 'trade-in.css' | asset_url | stylesheet_tag }}
+{{ 'trade-in.js' | asset_url | script_tag }}
+
+<div class="trade-in-calculator">
+  <div class="trade-in-grid">
+    <!-- Trade-in Device Card -->
+    <div class="trade-in-card">
+      <h2>Dispozitivul tău</h2>
+      <select id="trade-in-category" class="trade-in-select">
+        <option value="">Selectează categoria</option>
+      </select>
+      <select id="trade-in-product" class="trade-in-select" disabled>
+        <option value="">Selectează produsul</option>
+      </select>
+      <div id="trade-in-price" class="price-display">
+        Valoarea de schimb: <span>-</span>
+      </div>
+    </div>
+
+    <!-- Desired Device Card -->
+    <div class="trade-in-card">
+      <h2>Dispozitivul dorit</h2>
+      <select id="desired-category" class="trade-in-select">
+        <option value="">Selectează categoria</option>
+        {% for product in collections['for-sale'].products %}
+          <option value="{{ product.id }}">{{ product.title }} - ${{ product.price | money_without_currency }}</option>
+        {% endfor %}
+      </select>
+      <div id="desired-price" class="price-display">
+        Preț: <span>-</span>
+      </div>
+    </div>
+
+    <!-- Price Difference Card -->
+    <div class="trade-in-card">
+      <h2>Sumar</h2>
+      <div class="summary-content">
+        <div class="summary-row">
+          <span>Valoarea de schimb:</span>
+          <span id="summary-trade-value">-</span>
+        </div>
+        <div class="summary-row">
+          <span>Prețul noului dispozitiv:</span>
+          <span id="summary-new-price">-</span>
+        </div>
+        <div class="summary-row total">
+          <span>Suma de plată:</span>
+          <span id="summary-difference">-</span>
+        </div>
+        <button id="submit-trade-in" class="submit-button">
+          Trimite cererea
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Form -->
+<div id="trade-in-modal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Completează datele tale</h2>
+    <form id="trade-in-form">
+      <div class="form-group">
+        <label for="customer-name">Nume:</label>
+        <input type="text" id="customer-name" required>
+      </div>
+      <div class="form-group">
+        <label for="customer-phone">Număr de telefon:</label>
+        <input type="tel" id="customer-phone" required>
+      </div>
+      <button type="submit" class="submit-button">Trimite</button>
+    </form>
+  </div>
+</div>
