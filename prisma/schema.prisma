@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,7 +16,7 @@ model Session {
   state         String
   isOnline      Boolean   @default(false)
   scope         String?
-  expires       DateTime? @db.Timestamptz(6)
+  expires       DateTime?   @db.Timestamptz()
   accessToken   String
   userId        BigInt?
   firstName     String?
@@ -25,41 +28,55 @@ model Session {
   emailVerified Boolean?  @default(false)
 }
 
+enum ProductSaleType {
+  FOR_SALE
+  FOR_TRADE
+}
+
 model Collection {
-  id               String            @id @default(cuid())
-  name             String
+  id           String        @id @default(cuid())
+  name         String
+  productTypes ProductType[]
   productSaleTypes ProductSaleType[]
-  productTypes     ProductType[]
 }
 
 model ProductType {
   id           String     @id @default(cuid())
   name         String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   collectionId String
   products     Product[]
-  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 }
 
 model Product {
-  id            String          @id @default(cuid())
+  id            String      @id @default(cuid())
   name          String
   price         Float
-  productTypeId String
   type          ProductSaleType @default(FOR_SALE)
-  orders        Order[]
-  productType   ProductType     @relation(fields: [productTypeId], references: [id], onDelete: Cascade)
+  productType   ProductType @relation(fields: [productTypeId], references: [id], onDelete: Cascade)
+  productTypeId String
+  saleOrders    Order[]     @relation("SaleOrder")
+  tradeOrders   Order[]     @relation("TradeOrder")
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
 }
 
 model Order {
-  id          String   @id @default(cuid())
-  date        DateTime @default(now())
-  name        String
-  phoneNumber String
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
-}
-
-enum ProductSaleType {
-  FOR_SALE
-  FOR_TRADE
+  id                String      @id @default(cuid())
+  date              DateTime    @default(now())
+  customerName      String
+  customerPhone     String
+  status           OrderStatus @default(PENDING)
+  
+  // Product for sale
+  saleProductId     String?
+  saleProduct       Product?    @relation("SaleOrder", fields: [saleProductId], references: [id])
+  
+  // Product for trade
+  tradeProductId    String?
+  tradeProduct      Product?    @relation("TradeOrder", fields: [tradeProductId], references: [id])
 }

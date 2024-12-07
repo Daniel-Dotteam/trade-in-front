@@ -2,67 +2,101 @@
 {
   "name": "Trade-in Calculator",
   "target": "section",
-  "settings": []
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Calculator Trade-in"
+    }
+  ]
 }
 {% endschema %}
+
 
 
 {{ 'trade-in.css' | asset_url | stylesheet_tag }}
 {{ 'trade-in.js' | asset_url | script_tag }}
 
 <div class="trade-in-calculator">
+  <h1 class="trade-in-title">{{ block.settings.title }}</h1>
+  
   <div class="trade-in-grid">
     <!-- Trade-in Device Card -->
     <div class="trade-in-card">
       <h2>Dispozitivul tău</h2>
-      <select id="trade-in-collection" class="trade-in-select">
-        <option value="">Selectează colecția</option>
-      </select>
-      <select id="trade-in-product-type" class="trade-in-select" disabled>
-        <option value="">Selectează tipul produsului</option>
-      </select>
-      <select id="trade-in-product" class="trade-in-select" disabled>
-        <option value="">Selectează produsul</option>
-      </select>
+      <div class="select-group">
+        <label for="trade-in-collection">Colecția:</label>
+        <select id="trade-in-collection" class="trade-in-select">
+          <option value="">Selectează colecția</option>
+        </select>
+      </div>
+      
+      <div class="select-group">
+        <label for="trade-in-product-type">Tipul produsului:</label>
+        <select id="trade-in-product-type" class="trade-in-select" disabled>
+          <option value="">Selectează tipul produsului</option>
+        </select>
+      </div>
+      
+      <div class="select-group">
+        <label for="trade-in-product">Produsul:</label>
+        <select id="trade-in-product" class="trade-in-select" disabled>
+          <option value="">Selectează produsul</option>
+        </select>
+      </div>
+      
       <div id="trade-in-price" class="price-display">
-        Valoarea de schimb: <span>-</span>
+        Valoarea de schimb: <span>0 lei</span>
       </div>
     </div>
 
     <!-- Desired Device Card -->
     <div class="trade-in-card">
       <h2>Dispozitivul dorit</h2>
-      <select id="desired-collection" class="trade-in-select">
-        <option value="">Selectează colecția</option>
-      </select>
-      <select id="desired-product-type" class="trade-in-select" disabled>
-        <option value="">Selectează tipul produsului</option>
-      </select>
-      <select id="desired-product" class="trade-in-select" disabled>
-        <option value="">Selectează produsul</option>
-      </select>
+      <div class="select-group">
+        <label for="desired-collection">Colecția:</label>
+        <select id="desired-collection" class="trade-in-select">
+          <option value="">Selectează colecția</option>
+        </select>
+      </div>
+      
+      <div class="select-group">
+        <label for="desired-product-type">Tipul produsului:</label>
+        <select id="desired-product-type" class="trade-in-select" disabled>
+          <option value="">Selectează tipul produsului</option>
+        </select>
+      </div>
+      
+      <div class="select-group">
+        <label for="desired-product">Produsul:</label>
+        <select id="desired-product" class="trade-in-select" disabled>
+          <option value="">Selectează produsul</option>
+        </select>
+      </div>
+      
       <div id="desired-price" class="price-display">
-        Preț: <span>-</span>
+        Preț: <span>0 lei</span>
       </div>
     </div>
 
     <!-- Price Difference Card -->
-    <div class="trade-in-card">
+    <div class="trade-in-card summary-card">
       <h2>Sumar</h2>
       <div class="summary-content">
         <div class="summary-row">
-          <span>Valoarea de schimb:</span>
-          <span id="summary-trade-value">-</span>
+          <span>Reducerea primită:</span>
+          <span id="summary-trade-value">0 lei</span>
         </div>
         <div class="summary-row">
           <span>Prețul noului dispozitiv:</span>
-          <span id="summary-new-price">-</span>
+          <span id="summary-new-price">0 lei</span>
         </div>
         <div class="summary-row total">
           <span>Suma de plată:</span>
-          <span id="summary-difference">-</span>
+          <span id="summary-difference">0 lei</span>
         </div>
-        <button id="submit-trade-in" class="submit-button">
+        <button id="submit-trade-in" class="submit-button" disabled>
           Trimite cererea
         </button>
       </div>
@@ -77,14 +111,62 @@
     <h2>Completează datele tale</h2>
     <form id="trade-in-form">
       <div class="form-group">
-        <label for="customer-name">Nume:</label>
-        <input type="text" id="customer-name" required>
+        <label for="customer-name">Nume complet: <span class="required">*</span></label>
+        <input 
+          type="text" 
+          id="customer-name" 
+          name="customer-name"
+          required
+          pattern="[A-Za-zĂăÂâÎîȘșȚț\s]+"
+          minlength="3"
+          placeholder="Numele și prenumele"
+        >
       </div>
+      
       <div class="form-group">
-        <label for="customer-phone">Număr de telefon:</label>
-        <input type="tel" id="customer-phone" required>
+        <label for="customer-phone">Număr de telefon: <span class="required">*</span></label>
+        <input 
+          type="tel" 
+          id="customer-phone" 
+          name="customer-phone"
+          required
+          placeholder="07XXXXXXXX"
+        >
       </div>
-      <button type="submit" class="submit-button">Trimite</button>
+
+      <div class="form-summary">
+        <h3>Detalii comandă:</h3>
+        <p>Dispozitiv trade-in: <span id="modal-trade-in-details">-</span></p>
+        <p>Dispozitiv nou: <span id="modal-desired-details">-</span></p>
+        <p>Sumă de plată: <span id="modal-total">-</span></p>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="cancel-button">Anulează</button>
+        <button type="submit" class="submit-button">Trimite cererea</button>
+      </div>
     </form>
+  </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loading-spinner" class="loading-spinner">
+  <div class="spinner"></div>
+</div>
+
+<!-- Error Message -->
+<div id="error-message" class="error-message">
+  <div class="error-content">
+    <span class="close">&times;</span>
+    <p></p>
+  </div>
+</div>
+
+<!-- Success Message -->
+<div id="success-message" class="success-message">
+  <div class="success-content">
+    <div class="success-icon">✓</div>
+    <h2>Mulțumim!</h2>
+    <p>Cererea dumneavoastră a fost înregistrată cu succes.</p>
   </div>
 </div>
