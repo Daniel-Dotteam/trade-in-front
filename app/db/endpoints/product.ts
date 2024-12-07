@@ -1,10 +1,23 @@
 import prisma from "app/db.server";
-import { ProductType } from "@prisma/client";
+import { ProductSaleType } from "@prisma/client";
+
 // Create a new product
-export async function createProduct(data: { name: string, price: number, collectionId: string, type: ProductType }) {
+export async function createProduct(data: { 
+  name: string, 
+  price: number, 
+  productTypeId: string, 
+  type: ProductSaleType 
+}) {
   try {
     const product = await prisma.product.create({
       data,
+      include: {
+        productType: {
+          include: {
+            collection: true
+          }
+        }
+      }
     });
     return new Response(JSON.stringify(product), {
       headers: { "Content-Type": "application/json" },
@@ -22,7 +35,13 @@ export async function createProduct(data: { name: string, price: number, collect
 export async function getProducts() {
   try {
     const products = await prisma.product.findMany({
-      include: { collection: true },
+      include: {
+        productType: {
+          include: {
+            collection: true
+          }
+        }
+      },
     });
     return new Response(JSON.stringify(products), {
       headers: { "Content-Type": "application/json" },
@@ -41,7 +60,13 @@ export async function getProduct(id: string) {
   try {
     const product = await prisma.product.findUnique({
       where: { id },
-      include: { collection: true },
+      include: {
+        productType: {
+          include: {
+            collection: true
+          }
+        }
+      },
     });
 
     if (!product) {
@@ -66,11 +91,23 @@ export async function getProduct(id: string) {
 }
 
 // Update a product
-export async function updateProduct(id: string, data: { name?: string, price?: number, collectionId?: string }) {
+export async function updateProduct(id: string, data: { 
+  name?: string, 
+  price?: number, 
+  productTypeId?: string,
+  type?: ProductSaleType 
+}) {
   try {
     const product = await prisma.product.update({
       where: { id },
       data,
+      include: {
+        productType: {
+          include: {
+            collection: true
+          }
+        }
+      }
     });
     return new Response(JSON.stringify(product), {
       headers: { "Content-Type": "application/json" },

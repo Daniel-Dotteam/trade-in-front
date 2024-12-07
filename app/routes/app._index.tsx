@@ -10,7 +10,8 @@ import { useLoaderData, useSubmit, Link } from "@remix-run/react";
 import { useState } from "react";
 import { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { getCollections, createCollection } from "app/db/prisma.server";
+import { getCollections, createCollection, deleteCollection } from "app/db/prisma.server";
+import { ProductSaleType } from "@prisma/client";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await authenticate.admin(request);
@@ -20,13 +21,30 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
   await authenticate.admin(request);
   const formData = await request.formData();
+  
+  if (request.method === "DELETE") {
+    const collectionId = formData.get("collectionId") as string;
+    return deleteCollection(collectionId);
+  }
+  
   const name = formData.get("name") as string;
-  return createCollection(name);
+  const productSaleTypes = [ProductSaleType.FOR_SALE, ProductSaleType.FOR_TRADE];
+  return createCollection(name, productSaleTypes);
 }
 
 type Collection = {
   id: string;
   name: string;
+  productTypes: Array<{
+    id: string;
+    name: string;
+    products: Array<{
+      id: string;
+      name: string;
+      price: number;
+      type: ProductSaleType;
+    }>;
+  }>;
 };
 
 export default function Index() {
@@ -42,6 +60,14 @@ export default function Index() {
     setName(""); // Clear input after submission
   };
 
+  const handleDelete = (collectionId: string) => {
+    if (confirm("Sigur doriți să ștergeți această categorie? Toate produsele asociate vor fi șterse.")) {
+      const formData = new FormData();
+      formData.append("collectionId", collectionId);
+      submit(formData, { method: "DELETE" });
+    }
+  };
+
   return (
     <Page>
       <Card>
@@ -49,12 +75,12 @@ export default function Index() {
           <form onSubmit={handleSubmit}>
             <FormLayout>
               <TextField
-                label="Collection Name"
+                label="Denumirea Categoriei"
                 value={name}
                 onChange={setName}
                 autoComplete="off"
               />
-              <Button submit>Create Collection</Button>
+              <Button submit>Crează Categoria</Button>
             </FormLayout>
           </form>
         </FormLayout>
@@ -62,17 +88,22 @@ export default function Index() {
 
       <Card>
         <Text variant="headingMd" as="h2">
-          Collections
+          Categorii
         </Text>
-        <div style={{ marginTop: "1rem" }}>
+        <div style={{ marginTop: "1rem", gap: "1rem", display: "flex", flexDirection: "column" }}>
           {collections?.map((collection: Collection) => (
-            <Link key={collection.id} to={`/app/collection/${collection.id}`} style={{ textDecoration: 'none' }}>
-              <Card >
-                <Text as="h3" variant="bodyMd">
-                  {collection.name}
-                </Text>
-              </Card>
-            </Link>
+            <Card key={collection.id}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Link to={`/app/collection/${collection.id}`} style={{ textDecoration: 'none' }}>
+                  <Text as="h3" variant="bodyMd">
+                    {collection.name}
+                  </Text>
+                </Link>
+                <Button  onClick={() => handleDelete(collection.id)}>
+                  Șterge
+                </Button>
+              </div>
+            </Card>
           ))}
         </div>
       </Card>

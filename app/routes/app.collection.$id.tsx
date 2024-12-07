@@ -6,30 +6,27 @@ import {
   Button,
   Text,
   Layout,
-  ResourceList,
-  ResourceItem,
-  Box,
-  BlockStack,
-  Select,
 } from "@shopify/polaris";
 import { LoaderFunctionArgs, ActionFunctionArgs, json } from "@remix-run/node";
 import { useLoaderData, useSubmit } from "@remix-run/react";
-import { ProductType } from "@prisma/client";
 import { useState } from "react";
 import { authenticate } from "../shopify.server";
 import prisma from "app/db.server";
-import { deleteProduct } from "app/db/endpoints/product";
+import { deleteProductType, createProductType } from "app/db/prisma.server";
 
 type LoaderData = {
   collection: {
     id: string;
     name: string;
-    products: {
+    productTypes: Array<{
       id: string;
       name: string;
-      price: number;
-      type: ProductType;
-    }[];
+      products: Array<{
+        id: string;
+        name: string;
+        price: number;
+      }>;
+    }>;
   };
 };
 
@@ -39,7 +36,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const collection = await prisma.collection.findUnique({
     where: { id: params.id },
     include: {
-      products: true,
+      productTypes: {
+        include: {
+          products: true
+        }
+      }
     },
   });
 
@@ -55,126 +56,88 @@ export async function action({ request, params }: ActionFunctionArgs) {
   
   const formData = await request.formData();
   const actionType = formData.get("actionType");
-  const productId = formData.get("productId") as string;
 
   if (actionType === "delete") {
-    await deleteProduct(productId);
-  } else {
-    const name = formData.get("name") as string;
-    const price = parseFloat(formData.get("price") as string);
-    const type = formData.get("type") as ProductType;
-
-    await prisma.product.create({
-      data: {
-        name,
-        price,
-        type,
-        collectionId: params.id as string,
-      },
-    });
+    const productTypeId = formData.get("productTypeId") as string;
+    return deleteProductType(productTypeId);
   }
 
-  return json({ success: true });
+  // Create product type
+  const name = formData.get("name") as string;
+  return createProductType({ 
+    name, 
+    collectionId: params.id as string 
+  });
 }
 
 export default function CollectionDetail() {
   const { collection } = useLoaderData<LoaderData>();
   const submit = useSubmit();
   const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [type, setType] = useState<ProductType>("FOR_SALE");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append("name", name);
-    formData.append("price", price);
-    formData.append("type", type);
     submit(formData, { method: "POST" });
     setName("");
-    setPrice("");
-    setType("FOR_SALE");
   };
 
-  const handleDelete = (productId: string) => {
-    const formData = new FormData();
-    formData.append("actionType", "delete");
-    formData.append("productId", productId);
-    submit(formData, { method: "POST" });
+  const handleDelete = (productTypeId: string) => {
+    if (confirm("Are you sure you want to delete this product type? All associated products will be deleted.")) {
+      const formData = new FormData();
+      formData.append("actionType", "delete");
+      formData.append("productTypeId", productTypeId);
+      submit(formData, { method: "POST" });
+    }
   };
 
   return (
     <Page
-      title={`Collection: ${collection.name}`}
-      backAction={{ content: "Back", url: "/app" }}
+      title={`Categorie: ${collection.name}`}
+      backAction={{ content: "Înapoi", url: "/app" }}
     >
       <Layout>
         <Layout.Section>
           <Card>
-            <Card>
-              <form onSubmit={handleSubmit}>
-                <FormLayout>
-                  <TextField
-                    label="Product Name"
-                    value={name}
-                    onChange={setName}
-                    autoComplete="off"
-                  />
-                  <TextField
-                    label="Price"
-                    value={price}
-                    onChange={setPrice}
-                    type="number"
-                    autoComplete="off"
-                  />
-                  <Select
-                    label="Type"
-                    value={type}
-                    onChange={(value) => setType(value as ProductType)}
-                    options={[
-                      { label: "For Sale", value: "FOR_SALE" },
-                      { label: "For Trade", value: "FOR_TRADE" },
-                    ]}
-                  />
-                  <Button submit >Add Product</Button>
-                </FormLayout>
-              </form>
-            </Card>
+            <form onSubmit={handleSubmit}>
+              <FormLayout>
+                <TextField
+                  label="Numele tipului de produs"
+                  value={name}
+                  onChange={setName}
+                  autoComplete="off"
+                />
+                <Button submit>Adaugă tipul de produs</Button>
+              </FormLayout>
+            </form>
           </Card>
         </Layout.Section>
 
         <Layout.Section>
-          <Card>
-            <Card>
-              <Text variant="headingMd" as="h2">
-                Products
-              </Text>
-              <div style={{ marginTop: "1rem" }}>
-                <ResourceList
-                  items={collection.products}
-                  renderItem={(product) => (
-                    <ResourceItem
-                      id={product.id}
-                      onClick={() => {}}
-                    >
-                      <BlockStack>
-                        <Box>
-                          <Text as="h3" variant="bodyMd" fontWeight="bold">{product.name}</Text>
-                        </Box>
-                        <Box>
-                          <Text as="p" variant="bodyMd">${product.price}</Text>
-                        </Box>
-                        <Box>
-                          <Text as="p" variant="bodyMd">{product.type}</Text>
-                        </Box>
-                        <Button onClick={() => handleDelete(product.id)}>Delete</Button>
-                      </BlockStack>
-                    </ResourceItem>
-                  )}
-                />
+          {collection.productTypes.map(productType => (
+            <Card key={productType.id}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <Button
+                    variant="plain"
+                    url={`/app/product_type/${productType.id}?collectionId=${collection.id}`}
+                    textAlign="left"
+                  >
+                    {productType.name}
+                  </Button>
+                  <Text variant="bodyMd" as="p" >
+                    {productType.products.length} produse
+                  </Text>
+                </div>
+                <Button 
+                  onClick={() => handleDelete(productType.id)}
+                >
+                  Șterge
+                </Button>
               </div>
             </Card>
-          </Card>
+          ))}
         </Layout.Section>
       </Layout>
     </Page>

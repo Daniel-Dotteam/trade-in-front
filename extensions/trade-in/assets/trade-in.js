@@ -1,11 +1,14 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOMContentLoaded');
-  const tradeInCategory = document.getElementById('trade-in-category');
+  // Get DOM elements
+  const tradeInCollection = document.getElementById('trade-in-collection');
+  const tradeInProductType = document.getElementById('trade-in-product-type');
   const tradeInProduct = document.getElementById('trade-in-product');
-  const desiredCategory = document.getElementById('desired-category');
+  const desiredCollection = document.getElementById('desired-collection');
+  const desiredProductType = document.getElementById('desired-product-type');
+  const desiredProduct = document.getElementById('desired-product');
   
   // Update API endpoint base URL
-  const API_BASE_URL = 'https://shopify-app-server.fly.dev/api'; // Updated to production URL
+  const API_BASE_URL = 'https://shopify-app-server.fly.dev/api';
   
   // Update the fetch configuration
   const fetchConfig = {
@@ -17,38 +20,84 @@ document.addEventListener('DOMContentLoaded', function() {
     credentials: 'omit'
   };
   
-  // Fetch categories on load
-  async function loadCategories() {
+  // Fetch collections on load
+  async function loadCollections() {
     try {
       const response = await fetch(`${API_BASE_URL}/collections`, fetchConfig);
       if (!response.ok) throw new Error('Failed to fetch collections');
       const collections = await response.json();
       
-      tradeInCategory.innerHTML = '<option value="">Selectează categoria</option>';
-      collections.forEach(collection => {
-        tradeInCategory.innerHTML += `
-          <option value="${collection.id}">${collection.name}</option>
-        `;
-      });
+      // Populate trade-in collections (FOR_TRADE)
+      tradeInCollection.innerHTML = '<option value="">Selectează colecția</option>';
+      collections
+        .filter(collection => collection.productSaleTypes.includes('FOR_TRADE'))
+        .forEach(collection => {
+          tradeInCollection.innerHTML += `
+            <option value="${collection.id}">${collection.name}</option>
+          `;
+        });
+
+      // Populate desired collections (FOR_SALE)
+      desiredCollection.innerHTML = '<option value="">Selectează colecția</option>';
+      collections
+        .filter(collection => collection.productSaleTypes.includes('FOR_SALE'))
+        .forEach(collection => {
+          desiredCollection.innerHTML += `
+            <option value="${collection.id}">${collection.name}</option>
+          `;
+        });
     } catch (error) {
       console.error('Error fetching collections:', error);
-      showError('Failed to load categories');
+      showError('Failed to load collections');
     }
   }
 
-  // Update product options when category changes
-  tradeInCategory.addEventListener('change', async function() {
+  // Update product types when trade-in collection changes
+  tradeInCollection.addEventListener('change', async function() {
     const collectionId = this.value;
+    tradeInProductType.disabled = true;
     tradeInProduct.disabled = true;
     
     if (!collectionId) {
+      tradeInProductType.innerHTML = '<option value="">Selectează tipul produsului</option>';
       tradeInProduct.innerHTML = '<option value="">Selectează produsul</option>';
       return;
     }
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/collections/${collectionId}/products?type=FOR_TRADE`,
+        `${API_BASE_URL}/product-types/collection/${collectionId}?type=FOR_TRADE`,
+        fetchConfig
+      );
+      if (!response.ok) throw new Error('Failed to fetch product types');
+      const productTypes = await response.json();
+      
+      tradeInProductType.innerHTML = '<option value="">Selectează tipul produsului</option>';
+      productTypes.forEach(productType => {
+        tradeInProductType.innerHTML += `
+          <option value="${productType.id}">${productType.name}</option>
+        `;
+      });
+      tradeInProductType.disabled = false;
+    } catch (error) {
+      console.error('Error fetching product types:', error);
+      showError('Failed to load product types');
+    }
+  });
+
+  // Update products when product type changes
+  tradeInProductType.addEventListener('change', async function() {
+    const productTypeId = this.value;
+    tradeInProduct.disabled = true;
+    
+    if (!productTypeId) {
+      tradeInProduct.innerHTML = '<option value="">Selectează produsul</option>';
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/products/type/${productTypeId}?type=FOR_TRADE`,
         fetchConfig
       );
       if (!response.ok) throw new Error('Failed to fetch products');
@@ -58,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
       products.forEach(product => {
         tradeInProduct.innerHTML += `
           <option value="${product.id}" data-price="${product.price}">
-            ${product.name} - $${product.price.toFixed(2)}
+            ${product.name} - ${product.price.toFixed(2)} lei
           </option>
         `;
       });
@@ -69,48 +118,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Load desired products (FOR_SALE type)
-  async function loadDesiredProducts() {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/products?type=FOR_SALE`,
-        fetchConfig
-      );
-      if (!response.ok) throw new Error('Failed to fetch desired products');
-      const products = await response.json();
-      
-      desiredCategory.innerHTML = '<option value="">Selectează produsul</option>';
-      products.forEach(product => {
-        desiredCategory.innerHTML += `
-          <option value="${product.id}" data-price="${product.price}">
-            ${product.name} - $${product.price.toFixed(2)}
-          </option>
-        `;
-      });
-    } catch (error) {
-      console.error('Error fetching desired products:', error);
-      showError('Failed to load available products');
-    }
-  }
-
   // Add error handling function
   function showError(message) {
-    // You can implement this based on your UI needs
     alert(message);
   }
 
-  // Rest of the code remains the same...
+  // Update price displays when products are selected
   tradeInProduct.addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
     const price = selectedOption.dataset.price || '0';
-    document.getElementById('trade-in-price').querySelector('span').textContent = price;
+    document.getElementById('trade-in-price').querySelector('span').textContent = `${price} lei`;
     updateSummary();
   });
 
-  desiredCategory.addEventListener('change', function() {
+  desiredProduct.addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
     const price = selectedOption.dataset.price || '0';
-    document.getElementById('desired-price').querySelector('span').textContent = price;
+    document.getElementById('desired-price').querySelector('span').textContent = `${price} lei`;
     updateSummary();
   });
 
@@ -118,14 +142,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const tradeInValue = parseFloat(document.getElementById('trade-in-price').querySelector('span').textContent) || 0;
     const newDevicePrice = parseFloat(document.getElementById('desired-price').querySelector('span').textContent) || 0;
     
-    document.getElementById('summary-trade-value').textContent = `$${tradeInValue.toFixed(2)}`;
-    document.getElementById('summary-new-price').textContent = `$${newDevicePrice.toFixed(2)}`;
-    document.getElementById('summary-difference').textContent = `$${Math.max(0, newDevicePrice - tradeInValue).toFixed(2)}`;
+    document.getElementById('summary-trade-value').textContent = `${tradeInValue.toFixed(2)} lei`;
+    document.getElementById('summary-new-price').textContent = `${newDevicePrice.toFixed(2)} lei`;
+    document.getElementById('summary-difference').textContent = `${Math.max(0, newDevicePrice - tradeInValue).toFixed(2)} lei`;
   }
-
-  // Initialize
-  loadCategories();
-  loadDesiredProducts();
 
   // Modal handling
   const modal = document.getElementById('trade-in-modal');
@@ -147,13 +167,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // Handle form submission
   form.onsubmit = async function(e) {
     e.preventDefault();
     
     const data = {
       name: document.getElementById('customer-name').value,
       phoneNumber: document.getElementById('customer-phone').value,
-      productId: document.getElementById('desired-category').value
+      productId: document.getElementById('desired-product').value
     };
 
     try {
@@ -171,8 +192,77 @@ document.addEventListener('DOMContentLoaded', function() {
         throw new Error('Something went wrong');
       }
     } catch (error) {
-      alert('A apărut o eroare. Vă rugăm încercați din nou.');
       console.error('Error:', error);
+      showError('A apărut o eroare. Vă rugăm încercați din nou.');
     }
   }
+
+  // Update products when desired product type changes
+  desiredProductType.addEventListener('change', async function() {
+    const productTypeId = this.value;
+    desiredProduct.disabled = true;
+    
+    if (!productTypeId) {
+      desiredProduct.innerHTML = '<option value="">Selectează produsul</option>';
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/products/type/${productTypeId}?type=FOR_SALE`,
+        fetchConfig
+      );
+      if (!response.ok) throw new Error('Failed to fetch products');
+      const products = await response.json();
+      
+      desiredProduct.innerHTML = '<option value="">Selectează produsul</option>';
+      products.forEach(product => {
+        desiredProduct.innerHTML += `
+          <option value="${product.id}" data-price="${product.price}">
+            ${product.name} - ${product.price.toFixed(2)} lei
+          </option>
+        `;
+      });
+      desiredProduct.disabled = false;
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      showError('Failed to load products');
+    }
+  });
+
+  // Update desired product types when collection changes
+  desiredCollection.addEventListener('change', async function() {
+    const collectionId = this.value;
+    desiredProductType.disabled = true;
+    desiredProduct.disabled = true;
+    
+    if (!collectionId) {
+      desiredProductType.innerHTML = '<option value="">Selectează tipul produsului</option>';
+      desiredProduct.innerHTML = '<option value="">Selectează produsul</option>';
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/product-types/collection/${collectionId}?type=FOR_SALE`,
+        fetchConfig
+      );
+      if (!response.ok) throw new Error('Failed to fetch product types');
+      const productTypes = await response.json();
+      
+      desiredProductType.innerHTML = '<option value="">Selectează tipul produsului</option>';
+      productTypes.forEach(productType => {
+        desiredProductType.innerHTML += `
+          <option value="${productType.id}">${productType.name}</option>
+        `;
+      });
+      desiredProductType.disabled = false;
+    } catch (error) {
+      console.error('Error fetching product types:', error);
+      showError('Failed to load product types');
+    }
+  });
+
+  // Initialize
+  loadCollections();
 }); 

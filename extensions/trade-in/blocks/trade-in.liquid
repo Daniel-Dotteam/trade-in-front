@@ -15,8 +15,11 @@
     <!-- Trade-in Device Card -->
     <div class="trade-in-card">
       <h2>Dispozitivul tău</h2>
-      <select id="trade-in-category" class="trade-in-select">
-        <option value="">Selectează categoria</option>
+      <select id="trade-in-collection" class="trade-in-select">
+        <option value="">Selectează colecția</option>
+      </select>
+      <select id="trade-in-product-type" class="trade-in-select" disabled>
+        <option value="">Selectează tipul produsului</option>
       </select>
       <select id="trade-in-product" class="trade-in-select" disabled>
         <option value="">Selectează produsul</option>
@@ -29,11 +32,14 @@
     <!-- Desired Device Card -->
     <div class="trade-in-card">
       <h2>Dispozitivul dorit</h2>
-      <select id="desired-category" class="trade-in-select">
-        <option value="">Selectează categoria</option>
-        {% for product in collections['for-sale'].products %}
-          <option value="{{ product.id }}">{{ product.title }} - ${{ product.price | money_without_currency }}</option>
-        {% endfor %}
+      <select id="desired-collection" class="trade-in-select">
+        <option value="">Selectează colecția</option>
+      </select>
+      <select id="desired-product-type" class="trade-in-select" disabled>
+        <option value="">Selectează tipul produsului</option>
+      </select>
+      <select id="desired-product" class="trade-in-select" disabled>
+        <option value="">Selectează produsul</option>
       </select>
       <div id="desired-price" class="price-display">
         Preț: <span>-</span>
